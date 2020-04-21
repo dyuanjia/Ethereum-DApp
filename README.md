@@ -13,14 +13,22 @@ These instructions will get you a copy of the project up and running on your loc
 - [Node.js](https://nodejs.org/en/) v12.16.1
 - [Ganache CLI](https://www.npmjs.com/package/ganache-cli) v6.9.1
 - [Truffle Suite](https://www.trufflesuite.com/docs/truffle/getting-started/installation) v5.1.22
+- [py-solc-x](https://pypi.org/project/py-solc-x/) v0.8.1
 
 ### Installing
 
-Install nodejs modules
+Install NodeJS modules
 
 ```console
 $ npm install
 $ npm install --save identicon.js@^2.3.3
+```
+
+Install Solidity compiler
+
+```console
+$ pip3 install py-solc-x
+$ python3 -m solcx.install v0.6.1
 ```
 
 ### Running
@@ -29,6 +37,7 @@ First, make sure ganache is running on `on 127.0.0.1:8545`. Then run it with:
 
 ```console
 $ npm start
+$ python3 server.py
 ```
 
 ## Running the tests
