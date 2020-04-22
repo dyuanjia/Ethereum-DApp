@@ -33,7 +33,6 @@ class App extends Component {
   async componentDidMount() {
     await this.loadWeb3();
     await this.loadAccount();
-    console.log(this.state.account);
   }
 
   async loadWeb3() {
