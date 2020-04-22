@@ -5,7 +5,7 @@ contract BlindAuction {
     // 8 bytes nonce => 64 bits
     // max bid => 192 bits
     uint256 constant public MAX_BID = 2**192 - 1;
-    bool ended = false;
+    bool public ended = false;
     
     string public name;
     string public description;
@@ -13,8 +13,9 @@ contract BlindAuction {
     uint256 public minimumBid;
     uint256 public biddingEndTime;
     uint256 public revealEndTime;
-    //uint256 stageDuration = 2 hours;
-    uint256 stageDuration = 10; // for testing
+    uint256 stageDuration = 2 hours; // for deployment
+    //uint256 stageDuration = 5 minutes; // for presentation
+    //uint256 stageDuration = 5; // for testing
     
     struct BlindBid {
         bytes32 hash;
