@@ -10,9 +10,10 @@ import Stepper from "@material-ui/core/Stepper";
 import StepLabel from "@material-ui/core/StepLabel";
 import Typography from "@material-ui/core/Typography";
 import Confirmation from "./Confirmation";
-import Form from "./Form";
+import Bidding from "./Bidding";
 import ItemInfo from "./ItemInfo";
 import History from "./History";
+import Revealing from "./Revealing";
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -52,19 +53,6 @@ const useStyles = makeStyles((theme) => ({
 
 const stages = ["Bidding Stage", "Revealing Stage", "Auction Ending"];
 
-function getStageContent(stage, minBid = -1) {
-  switch (stage) {
-    case 0:
-      return <Form minBid={minBid} />;
-    case 1:
-      return <Form />;
-    case 2:
-      return <Form />;
-    default:
-      throw new Error("Unknown Stage");
-  }
-}
-
 export default function Auction(props) {
   const classes = useStyles();
   const {
@@ -77,6 +65,7 @@ export default function Auction(props) {
     getBid,
     withdraw,
     message,
+    reveal,
     funcLoading,
     biddingEndTime,
     revealEndTime,
@@ -115,12 +104,67 @@ export default function Auction(props) {
             ))}
           </Stepper>
           <React.Fragment>
+            {/* Loading */}
             {stage === -1 && (
               <div className={classes.center}>
                 <CircularProgress color="primary" />
               </div>
             )}
-            {stage === stages.length ? (
+            {/* Bidding */}
+            {stage === 0 && (
+              <Bidding
+                minBid={minBid}
+                bid={bid}
+                message={message}
+                funcLoading={funcLoading}
+              />
+            )}
+            {/* Revealing */}
+            {stage === 1 && (
+              <Revealing
+                minBid={minBid}
+                reveal={reveal}
+                message={message}
+                funcLoading={funcLoading}
+              />
+            )}
+            <div className={classes.buttons}>
+              <Typography
+                color="textSecondary"
+                align="left"
+                display="inline"
+                className={classes.time}
+              >
+                {stage === 0 && "Bidding End Time: " + biddingEndTime}
+                {stage === 1 && "Reveal End Time: " + revealEndTime}
+              </Typography>
+              {stage === 0 && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={handleClickOpen}
+                  className={classes.button}
+                >
+                  Withdraw
+                </Button>
+              )}
+              <Confirmation
+                open={open}
+                handleClose={handleClose}
+                handleWithdraw={handleWithdraw}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={updateStage}
+                className={classes.button}
+              >
+                {stage === stages.length - 1
+                  ? "End Auction"
+                  : "Update Auction Stage"}
+              </Button>
+            </div>
+            {/* {stage === stages.length ? (
               <React.Fragment>
                 <Typography variant="h5" gutterBottom>
                   Thank you for your order.
@@ -132,54 +176,7 @@ export default function Auction(props) {
                 </Typography>
               </React.Fragment>
             ) : (
-              <React.Fragment>
-                {stage === 0 && (
-                  <Form
-                    minBid={minBid}
-                    bid={bid}
-                    message={message}
-                    funcLoading={funcLoading}
-                  />
-                )}
-                {/*getStageContent(activeStage, minBid)*/}
-                <div className={classes.buttons}>
-                  <Typography
-                    color="textSecondary"
-                    align="left"
-                    display="inline"
-                    className={classes.time}
-                  >
-                    {stage === 0 && "Bidding End Time: " + biddingEndTime}
-                    {stage === 1 && "Reveal End Time: " + revealEndTime}
-                  </Typography>
-                  {stage === 0 && (
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={handleClickOpen}
-                      className={classes.button}
-                    >
-                      Withdraw
-                    </Button>
-                  )}
-                  <Confirmation
-                    open={open}
-                    handleClose={handleClose}
-                    handleWithdraw={handleWithdraw}
-                  />
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={updateStage}
-                    className={classes.button}
-                  >
-                    {stage === stages.length - 1
-                      ? "End Auction"
-                      : "Update Auction Stage"}
-                  </Button>
-                </div>
-              </React.Fragment>
-            )}
+            )} */}
           </React.Fragment>
         </Paper>
       </Grid>

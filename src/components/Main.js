@@ -132,6 +132,12 @@ class Main extends Component {
     this.setState({ bids });
   };
 
+  updateBid = (amt) => {
+    const { bids } = this.state;
+    bids[0].secret = amt;
+    this.setState({ bids });
+  };
+
   bid = (bidHash) => {
     this.setState({ funcLoading: true });
     this.loadAccount().then(() => {
@@ -157,6 +163,38 @@ class Main extends Component {
           });
       } catch (err) {
         this.setState({ message: "Invalid SHA256 Hash", funcLoading: false });
+      }
+    });
+  };
+
+  reveal = (nonce, amt) => {
+    this.setState({ funcLoading: true });
+    this.loadAccount().then(() => {
+      const { auction, account, stage } = this.state;
+      try {
+        auction.methods
+          .reveal(nonce)
+          .send({ from: account, value: amt })
+          .on("transactionHash", (hash) => {
+            this.setState({ message: "Reveal Successful", funcLoading: false });
+            this.updateBid(amt);
+          })
+          .on("error", (err) => {
+            this.getStage().then((newStage) => {
+              if (stage !== newStage) {
+                alert("Auction has moved on to a different stage");
+              }
+              this.setState({
+                stage: newStage,
+                funcLoading: false,
+              });
+            });
+          });
+      } catch (err) {
+        this.setState({
+          message: "Invalid nonce or bid value",
+          funcLoading: false,
+        });
       }
     });
   };
@@ -292,6 +330,7 @@ class Main extends Component {
                       biddingEndTime={biddingEndTime}
                       revealEndTime={revealEndTime}
                       bid={this.bid}
+                      reveal={this.reveal}
                       getBid={this.getBid}
                       withdraw={this.withdraw}
                       message={message}
