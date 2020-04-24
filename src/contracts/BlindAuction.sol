@@ -14,8 +14,8 @@ contract BlindAuction {
     uint256 public biddingEndTime;
     uint256 public revealEndTime;
     //uint256 stageDuration = 2 hours; // for deployment
-    uint256 stageDuration = 5 minutes; // for presentation
-    //uint256 stageDuration = 5; // for testing
+    //uint256 stageDuration = 5 minutes; // for presentation
+    uint256 stageDuration = 5; // for testing
     
     struct BlindBid {
         bytes32 hash;
@@ -48,7 +48,7 @@ contract BlindAuction {
             owner = _owner;
             minimumBid = _minimum_bid;
             biddingEndTime = now + stageDuration;
-            revealEndTime = biddingEndTime + stageDuration*10;
+            revealEndTime = biddingEndTime + stageDuration;
             highestBidder = _owner;
             highestBid = _minimum_bid;
     }
