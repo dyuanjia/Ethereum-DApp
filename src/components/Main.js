@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import Web3 from "web3";
 import { Switch, Route } from "react-router-dom";
 import { withStyles } from "@material-ui/core/styles";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import Container from "@material-ui/core/Container";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
@@ -24,12 +25,18 @@ const styles = (theme) => ({
     paddingTop: theme.spacing(4),
     paddingBottom: theme.spacing(4),
   },
+  center: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 class Main extends Component {
   async componentDidMount() {
     await this.loadWeb3();
-    await this.loadBlockchainData();
+    await this.loadContract();
+    await this.loadAccount();
   }
 
   async loadWeb3() {
@@ -45,27 +52,128 @@ class Main extends Component {
     }
   }
 
-  async loadBlockchainData() {
+  async loadContract() {
+    const web3 = window.web3;
+    // load contract ABI
+    let auction;
+    web3.eth.net
+      .getId()
+      .then((networkId) => {
+        const contractData = BlindAuction.networks[networkId];
+        if (contractData) {
+          auction = new web3.eth.Contract(
+            BlindAuction.abi,
+            contractData.address
+          );
+          this.setState({ auction });
+        } else {
+          window.alert(
+            "Blind Auction contract not deployed to current network."
+          );
+        }
+        this.setState({ loading: false });
+      })
+      .then(() => {
+        //load item info
+        auction.methods
+          .name()
+          .call()
+          .then((itemName) => {
+            this.setState({ itemName });
+          });
+        auction.methods
+          .description()
+          .call()
+          .then((itemDesc) => {
+            this.setState({ itemDesc });
+          });
+        auction.methods
+          .minimumBid()
+          .call()
+          .then((itemMinBid) => {
+            this.setState({ itemMinBid });
+          });
+      });
+  }
+
+  async loadAccount() {
     const web3 = window.web3;
     web3.eth.getAccounts().then((accounts) => {
       this.setState({ account: accounts[0] });
     });
-    // load contract ABI
-    web3.eth.net.getId().then((networkId) => {
-      const contractData = BlindAuction.networks[networkId];
-      if (contractData) {
-        const auction = new web3.eth.Contract(
-          BlindAuction.abi,
-          contractData.address
-        );
-        this.setState({ auction });
-      } else {
-        window.alert("Blind Auction contract not deployed to current network.");
+  }
+
+  bid = (bidHash) => {
+    this.setState({ funcLoading: true });
+    this.loadAccount().then(() => {
+      const { auction, account, stage } = this.state;
+      try {
+        auction.methods
+          .bid(bidHash)
+          .send({ from: account })
+          .on("transactionHash", (hash) => {
+            this.setState({ message: "Bid Successful", funcLoading: false });
+          })
+          .on("error", (err) => {
+            this.getStage().then((newStage) => {
+              if (stage !== newStage) {
+                alert("Auction has moved on to a different stage");
+              }
+              this.setState({
+                stage: newStage,
+                funcLoading: false,
+              });
+            });
+          });
+      } catch (err) {
+        this.setState({ message: "Invalid SHA256 Hash", funcLoading: false });
       }
     });
+  };
 
-    this.setState({ loading: false });
-  }
+  getBid = () => {
+    this.loadAccount().then(() => {
+      const { auction, account } = this.state;
+      auction.methods
+        .getBid()
+        .call({ from: account })
+        .then((myBid) => {
+          console.log(myBid);
+          if (myBid == 0) {
+            this.setState({ myBid: "You have not bidded" });
+          } else {
+            this.setState({ myBid });
+          }
+        });
+    });
+  };
+
+  withdraw = () => {
+    this.loadAccount().then(() => {
+      const { auction, account } = this.state;
+      auction.methods
+        .withdraw()
+        .send({ from: account })
+        .then((txHash) => {
+          this.setState({ myBid: "You withdrew from this auction" });
+        })
+        .catch((err) => {
+          this.setState({ myBid: "You have not bidded" });
+        });
+    });
+  };
+
+  getStage = () => {
+    const { auction } = this.state;
+    return new Promise(function (resolve, reject) {
+      auction.methods
+        .getStage()
+        .call()
+        .then((stage) => {
+          resolve(stage);
+        });
+    });
+  };
 
   handleDrawerOpen = () => {
     this.setState({ open: true });
@@ -77,16 +185,33 @@ class Main extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      account: "",
-      auction: {},
-      bids: {},
       loading: true,
       open: false,
+      account: "",
+      myBid: "",
+      auction: {},
+      bids: [],
+      itemName: "",
+      itemDesc: "",
+      itemMinBid: -1,
+      funcLoading: false,
+      message: "",
+      stage: 0,
     };
   }
 
   render() {
-    const { account, open } = this.state;
+    const {
+      loading,
+      open,
+      account,
+      myBid,
+      itemName,
+      itemDesc,
+      itemMinBid,
+      funcLoading,
+      message,
+    } = this.state;
     const { classes } = this.props;
 
     return (
@@ -100,10 +225,33 @@ class Main extends Component {
         <main className={classes.content}>
           <div className={classes.appBarSpacer} />
           <Container maxWidth="lg" className={classes.container}>
-            <Switch>
-              <Route path="/" exact component={Auction} />
-              <Route component={NotFound} />
-            </Switch>
+            {loading ? (
+              <div className={classes.center}>
+                <CircularProgress color="primary" />
+              </div>
+            ) : (
+              <Switch>
+                <Route
+                  path="/"
+                  exact
+                  render={(props) => (
+                    <Auction
+                      {...props}
+                      name={itemName}
+                      desc={itemDesc}
+                      minBid={itemMinBid}
+                      myBid={myBid}
+                      funcLoading={funcLoading}
+                      bid={this.bid}
+                      getBid={this.getBid}
+                      withdraw={this.withdraw}
+                      message={message}
+                    />
+                  )}
+                />
+                <Route component={NotFound} />
+              </Switch>
+            )}
             <Footer />
           </Container>
         </main>

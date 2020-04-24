@@ -65,6 +65,10 @@ contract(
         const _highestBidder = await blindAuction.highestBidder();
         assert.equal(_highestBidder, itemOwner);
       });
+      it("starts in bidding stage", async () => {
+        const _stage = await blindAuction.getStage();
+        assert.equal(_stage, 0);
+      });
     });
 
     describe("Invalid constructor", async () => {
@@ -144,6 +148,7 @@ contract(
     });
 
     describe("Revealing Stage", async () => {
+      let stage;
       before(async () => {
         await blindAuction.bid(hash1, { from: bidder1 });
         await blindAuction.bid(hash2, { from: bidder2 });
@@ -171,6 +176,8 @@ contract(
         assert.equal(bid, hash1);
       });
       it("allows a bidder to reveal his bid and emits a Reveal event", async () => {
+        stage = await blindAuction.getStage();
+        assert.equal(stage, 1);
         const response = await blindAuction.reveal(nonce2, {
           from: bidder2,
           value: secret2,
@@ -221,7 +228,7 @@ contract(
       });
       it("allows endAuction() be called after the revealing stage, and transfer the highest bid to the item owner", async () => {
         console.log("Sleeping until revealing stage ends...");
-        await sleep(stageDuration * 1000);
+        await sleep((stageDuration + 1) * 1000);
         let ended = await blindAuction.ended();
         assert.isFalse(ended);
         const beforeBalance = await web3.eth.getBalance(itemOwner);
@@ -236,6 +243,8 @@ contract(
         assert.equal(afterBalance - beforeBalance, secret3);
       });
       it("prevents endAuction() from being called again", async () => {
+        stage = await blindAuction.getStage();
+        assert.equal(stage, 3);
         await blindAuction.endAuction().should.be.rejected;
       });
     });

@@ -64,6 +64,7 @@ contract BlindAuction {
     }
     
     function withdraw() external onlyBefore(biddingEndTime, msg.sender) {
+        require(bids[msg.sender].hash != 0, "you have not bidded");
         delete bids[msg.sender];
         emit Bid(msg.sender, 0);
     }
@@ -106,6 +107,19 @@ contract BlindAuction {
         require(_secret < MAX_BID, "bid exceeds max bid amount");
         bytes32 concat = bytes32(_secret << 64 | uint64(_nonce));
         return sha256(abi.encodePacked(concat));
+    }
+
+    function getStage() external view returns(uint) {
+        uint _time = now;
+        if (_time < biddingEndTime) {
+            return 0;
+        } else if (_time < revealEndTime) {
+            return 1;
+        } else if (ended) {
+            return 3;
+        } else {
+            return 2;
+        }
     }
     
     event Bid(
