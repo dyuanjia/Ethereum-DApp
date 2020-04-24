@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import Grid from "@material-ui/core/Grid";
 import Paper from "@material-ui/core/Paper";
 import Step from "@material-ui/core/Step";
@@ -11,7 +12,7 @@ import Typography from "@material-ui/core/Typography";
 import Confirmation from "./Confirmation";
 import Form from "./Form";
 import ItemInfo from "./ItemInfo";
-import Orders from "./Orders";
+import History from "./History";
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -25,7 +26,7 @@ const useStyles = makeStyles((theme) => ({
     overflowX: "hidden",
   },
   stepper: {
-    padding: theme.spacing(1, 0, 2),
+    padding: theme.spacing(2, 0, 2),
   },
   buttons: {
     display: "flex",
@@ -35,6 +36,17 @@ const useStyles = makeStyles((theme) => ({
   button: {
     marginLeft: theme.spacing(1),
     marginBottom: theme.spacing(1),
+  },
+  time: {
+    marginTop: "5px",
+    marginRight: "auto",
+    justifyContent: "left",
+  },
+  center: {
+    display: "flex",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
 }));
 
@@ -59,19 +71,19 @@ export default function Auction(props) {
     name,
     desc,
     minBid,
-    myBid,
+    bids,
+    bidMsg,
     bid,
     getBid,
     withdraw,
     message,
     funcLoading,
+    biddingEndTime,
+    revealEndTime,
+    stage,
+    updateStage,
   } = props;
   const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
-
-  const [activeStage, setActiveStage] = useState(0);
-  const handleNext = () => {
-    setActiveStage(activeStage + 1);
-  };
 
   const [open, setOpen] = useState(false);
   const handleClickOpen = () => {
@@ -88,14 +100,14 @@ export default function Auction(props) {
   return (
     <Grid container spacing={3}>
       {/* Item Info */}
-      <Grid item xs={12} md={4} lg={3}>
+      <Grid item xs={12} md={4} lg={4}>
         <Paper className={fixedHeightPaper}>
           <ItemInfo name={name} desc={desc} />
         </Paper>
       </Grid>
-      <Grid item xs={12} md={8} lg={9}>
+      <Grid item xs={12} md={8} lg={8}>
         <Paper className={fixedHeightPaper}>
-          <Stepper activeStep={activeStage} className={classes.stepper}>
+          <Stepper activeStep={stage} className={classes.stepper}>
             {stages.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -103,7 +115,12 @@ export default function Auction(props) {
             ))}
           </Stepper>
           <React.Fragment>
-            {activeStage === stages.length ? (
+            {stage === -1 && (
+              <div className={classes.center}>
+                <CircularProgress color="primary" />
+              </div>
+            )}
+            {stage === stages.length ? (
               <React.Fragment>
                 <Typography variant="h5" gutterBottom>
                   Thank you for your order.
@@ -116,19 +133,26 @@ export default function Auction(props) {
               </React.Fragment>
             ) : (
               <React.Fragment>
-                {activeStage === 0 && (
+                {stage === 0 && (
                   <Form
                     minBid={minBid}
                     bid={bid}
-                    getBid={getBid}
-                    myBid={myBid}
                     message={message}
                     funcLoading={funcLoading}
                   />
                 )}
                 {/*getStageContent(activeStage, minBid)*/}
                 <div className={classes.buttons}>
-                  {activeStage === 0 && (
+                  <Typography
+                    color="textSecondary"
+                    align="left"
+                    display="inline"
+                    className={classes.time}
+                  >
+                    {stage === 0 && "Bidding End Time: " + biddingEndTime}
+                    {stage === 1 && "Reveal End Time: " + revealEndTime}
+                  </Typography>
+                  {stage === 0 && (
                     <Button
                       variant="contained"
                       color="secondary"
@@ -146,12 +170,12 @@ export default function Auction(props) {
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={handleNext}
+                    onClick={updateStage}
                     className={classes.button}
                   >
-                    {activeStage === stages.length - 1
-                      ? "Place order"
-                      : "Check Auction Stage"}
+                    {stage === stages.length - 1
+                      ? "End Auction"
+                      : "Update Auction Stage"}
                   </Button>
                 </div>
               </React.Fragment>
@@ -162,7 +186,7 @@ export default function Auction(props) {
       {/* Recent Orders */}
       <Grid item xs={12}>
         <Paper className={classes.paper}>
-          <Orders />
+          <History bids={bids} getBid={getBid} bidMsg={bidMsg} />
         </Paper>
       </Grid>
     </Grid>

@@ -10,6 +10,7 @@ import Footer from "./Footer";
 import Auction from "./Auction";
 import NotFound from "./NotFound";
 import BlindAuction from "../abis/BlindAuction.json";
+import { convertTime } from "../utils/index";
 
 const styles = (theme) => ({
   root: {
@@ -93,6 +94,22 @@ class Main extends Component {
           .then((itemMinBid) => {
             this.setState({ itemMinBid });
           });
+        auction.methods
+          .biddingEndTime()
+          .call()
+          .then((time) => {
+            const biddingEndTime = convertTime(time, true);
+            this.setState({ biddingEndTime });
+          });
+        auction.methods
+          .revealEndTime()
+          .call()
+          .then((time) => {
+            const revealEndTime = convertTime(time, true);
+            this.setState({ revealEndTime });
+          });
+
+        this.updateStage();
       });
   }
 
@@ -102,6 +119,18 @@ class Main extends Component {
       this.setState({ account: accounts[0] });
     });
   }
+
+  addBid = (bidHash) => {
+    const { itemName, bids } = this.state;
+    const now = Date.now() / 1000;
+    bids.push({
+      date: convertTime(now),
+      name: itemName,
+      hash: bidHash,
+      secret: "Not Available",
+    });
+    this.setState({ bids });
+  };
 
   bid = (bidHash) => {
     this.setState({ funcLoading: true });
@@ -113,6 +142,7 @@ class Main extends Component {
           .send({ from: account })
           .on("transactionHash", (hash) => {
             this.setState({ message: "Bid Successful", funcLoading: false });
+            this.addBid(bidHash);
           })
           .on("error", (err) => {
             this.getStage().then((newStage) => {
@@ -133,16 +163,18 @@ class Main extends Component {
 
   getBid = () => {
     this.loadAccount().then(() => {
-      const { auction, account } = this.state;
+      const { auction, account, bids } = this.state;
       auction.methods
         .getBid()
         .call({ from: account })
         .then((myBid) => {
-          console.log(myBid);
           if (myBid == 0) {
-            this.setState({ myBid: "You have not bidded" });
+            this.setState({ bidMsg: "You have not bidded" });
           } else {
-            this.setState({ myBid });
+            this.setState({ bidMsg: "" });
+            if (bids.length === 0) {
+              this.addBid(myBid);
+            }
           }
         });
     });
@@ -150,28 +182,36 @@ class Main extends Component {
 
   withdraw = () => {
     this.loadAccount().then(() => {
-      const { auction, account } = this.state;
+      const { auction, account, bids } = this.state;
       auction.methods
         .withdraw()
         .send({ from: account })
         .then((txHash) => {
-          this.setState({ myBid: "You withdrew from this auction" });
+          bids.pop();
+          this.setState({ message: "You withdrew from this auction", bids });
         })
         .catch((err) => {
-          this.setState({ myBid: "You have not bidded" });
+          this.setState({ message: "You have not bidded" });
         });
     });
   };
 
   getStage = () => {
     const { auction } = this.state;
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
       auction.methods
         .getStage()
         .call()
         .then((stage) => {
-          resolve(stage);
+          resolve(parseInt(stage, 10));
         });
+    });
+  };
+
+  updateStage = () => {
+    this.getStage().then((stage) => {
+      console.log("Current Stage: " + stage);
+      this.setState({ stage });
     });
   };
 
@@ -188,15 +228,17 @@ class Main extends Component {
       loading: true,
       open: false,
       account: "",
-      myBid: "",
+      bidMsg: "",
       auction: {},
       bids: [],
       itemName: "",
       itemDesc: "",
       itemMinBid: -1,
+      biddingEndTime: "",
+      revealEndTime: "",
       funcLoading: false,
       message: "",
-      stage: 0,
+      stage: -1,
     };
   }
 
@@ -205,12 +247,16 @@ class Main extends Component {
       loading,
       open,
       account,
-      myBid,
+      bids,
+      bidMsg,
       itemName,
       itemDesc,
       itemMinBid,
       funcLoading,
+      biddingEndTime,
+      revealEndTime,
       message,
+      stage,
     } = this.state;
     const { classes } = this.props;
 
@@ -240,12 +286,17 @@ class Main extends Component {
                       name={itemName}
                       desc={itemDesc}
                       minBid={itemMinBid}
-                      myBid={myBid}
+                      bids={bids}
+                      bidMsg={bidMsg}
                       funcLoading={funcLoading}
+                      biddingEndTime={biddingEndTime}
+                      revealEndTime={revealEndTime}
                       bid={this.bid}
                       getBid={this.getBid}
                       withdraw={this.withdraw}
                       message={message}
+                      stage={stage}
+                      updateStage={this.updateStage}
                     />
                   )}
                 />

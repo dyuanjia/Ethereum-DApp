@@ -22,8 +22,6 @@ contract BlindAuction {
         uint secret;
     }
     mapping (address => BlindBid) bids;
-    // Allowed withdrawals of previous bids
-    mapping (address => uint) pendingReturns;
     address payable public highestBidder;
     
     modifier onlyBefore(uint _time, address _sender) { 

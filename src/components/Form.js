@@ -14,6 +14,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
+    marginTop: theme.spacing(1),
   },
   fixedWidth: {
     minWidth: "130px",
@@ -32,16 +33,12 @@ const useStyles = makeStyles((theme) => ({
   topMargin: {
     marginTop: theme.spacing(1),
   },
-  msg: {
-    marginTop: theme.spacing(1),
-  },
 }));
 
 export default function Form(props) {
   const classes = useStyles();
-  const { minBid, myBid, bid, getBid, message, funcLoading } = props;
+  const { minBid, bid, message, funcLoading } = props;
   const lowButton = clsx(classes.button, classes.buttonMargin);
-  const secondRow = clsx(classes.row, classes.topMargin);
 
   const [error, setError] = useState(false);
   const inputBid = useRef("");
@@ -119,25 +116,11 @@ export default function Form(props) {
           color="textSecondary"
           align="center"
           display="inline"
-          className={classes.msg}
+          className={classes.topMargin}
         >
           {message}
         </Typography>
       )}
-
-      <div className={secondRow}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={getBid}
-          className={classes.button}
-        >
-          Get my Bid
-        </Button>
-        <Typography color="textSecondary" display="inline">
-          {myBid}
-        </Typography>
-      </div>
     </React.Fragment>
   );
 }
