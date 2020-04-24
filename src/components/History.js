@@ -19,18 +19,20 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export default function History(props) {
-  const { bids, bidMsg, getBid } = props;
+  const { bids, bidMsg, getBid, stage } = props;
   const classes = useStyles();
 
   return (
     <React.Fragment>
-      <Title>Your Recent Bids</Title>
+      <Title>{stage === 0 ? "Your Bids" : "Highest Bid"}</Title>
       <Table size="small">
         <TableHead>
           <TableRow>
             <TableCell>Date</TableCell>
             <TableCell>Item</TableCell>
-            <TableCell>Blinded Bid</TableCell>
+            <TableCell>
+              {stage === 0 ? "Blinded Bid" : "Highest Bidder"}
+            </TableCell>
             <TableCell align="right">Bid Amount</TableCell>
           </TableRow>
         </TableHead>

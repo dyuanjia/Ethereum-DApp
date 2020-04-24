@@ -71,6 +71,8 @@ export default function Auction(props) {
     revealEndTime,
     stage,
     updateStage,
+    endAuction,
+    getWinner,
   } = props;
   const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
 
@@ -128,6 +130,28 @@ export default function Auction(props) {
                 funcLoading={funcLoading}
               />
             )}
+            {/* End Auction */}
+            {stage === 2 && (
+              <React.Fragment>
+                <Typography variant="h5" gutterBottom>
+                  Revealing Stage Ended
+                </Typography>
+                <Typography variant="subtitle1">
+                  You may now end the auction using the button below. The item
+                  will be delivered to the highest bidder.
+                </Typography>
+              </React.Fragment>
+            )}
+            {stage === 3 && (
+              <React.Fragment>
+                <Typography variant="h5" gutterBottom>
+                  Auction has Ended
+                </Typography>
+                <Typography variant="subtitle1">
+                  Thank you for your participation if you have bidded.
+                </Typography>
+              </React.Fragment>
+            )}
             <div className={classes.buttons}>
               <Typography
                 color="textSecondary"
@@ -153,37 +177,39 @@ export default function Auction(props) {
                 handleClose={handleClose}
                 handleWithdraw={handleWithdraw}
               />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={updateStage}
-                className={classes.button}
-              >
-                {stage === stages.length - 1
-                  ? "End Auction"
-                  : "Update Auction Stage"}
-              </Button>
+              {stage >= 2 ? (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  disabled={stage === 3}
+                  onClick={endAuction}
+                  className={classes.button}
+                >
+                  End Auction
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={updateStage}
+                  className={classes.button}
+                >
+                  Update Auction Stage
+                </Button>
+              )}
             </div>
-            {/* {stage === stages.length ? (
-              <React.Fragment>
-                <Typography variant="h5" gutterBottom>
-                  Thank you for your order.
-                </Typography>
-                <Typography variant="subtitle1">
-                  Your order number is #2001539. We have emailed your order
-                  confirmation, and will send you an update when your order has
-                  shipped.
-                </Typography>
-              </React.Fragment>
-            ) : (
-            )} */}
           </React.Fragment>
         </Paper>
       </Grid>
-      {/* Recent Orders */}
+      {/* Get Bids */}
       <Grid item xs={12}>
         <Paper className={classes.paper}>
-          <History bids={bids} getBid={getBid} bidMsg={bidMsg} />
+          <History
+            bids={bids}
+            getBid={stage === 0 ? getBid : getWinner}
+            bidMsg={bidMsg}
+            stage={stage}
+          />
         </Paper>
       </Grid>
     </Grid>

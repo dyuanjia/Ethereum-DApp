@@ -13,8 +13,8 @@ contract BlindAuction {
     uint256 public minimumBid;
     uint256 public biddingEndTime;
     uint256 public revealEndTime;
-    uint256 stageDuration = 2 hours; // for deployment
-    //uint256 stageDuration = 5 minutes; // for presentation
+    //uint256 stageDuration = 2 hours; // for deployment
+    uint256 stageDuration = 5 minutes; // for presentation
     //uint256 stageDuration = 5; // for testing
     
     struct BlindBid {
@@ -22,6 +22,7 @@ contract BlindAuction {
         uint secret;
     }
     mapping (address => BlindBid) bids;
+    uint256 public highestBid;
     address payable public highestBidder;
     
     modifier onlyBefore(uint _time, address _sender) { 
@@ -47,8 +48,9 @@ contract BlindAuction {
             owner = _owner;
             minimumBid = _minimum_bid;
             biddingEndTime = now + stageDuration;
-            revealEndTime = biddingEndTime + stageDuration;
+            revealEndTime = biddingEndTime + stageDuration*10;
             highestBidder = _owner;
+            highestBid = _minimum_bid;
     }
     
     function bid(bytes32 _hash) external onlyBefore(biddingEndTime, msg.sender) {
@@ -72,7 +74,7 @@ contract BlindAuction {
         onlyAfter(biddingEndTime) {
             // checks
             require(bids[msg.sender].hash != 0, "you must have bidded during the bidding stage");
-            require(msg.value > minimumBid, "your bid is not high enough");
+            require(msg.value > highestBid, "your bid is not high enough");
             require(msg.value < MAX_BID, "bid exceeds max bid amount");
             require(bids[msg.sender].secret == 0, "bid already revealed");
             bytes32 hash = calculateHash(msg.value, _nonce);
@@ -80,7 +82,7 @@ contract BlindAuction {
             // effects
             uint256 refund = bids[highestBidder].secret;
             address payable prevHighestBidder = highestBidder;
-            minimumBid = msg.value;
+            highestBid = msg.value;
             bids[msg.sender].secret = msg.value;
             highestBidder = msg.sender;
             // interactions
@@ -94,8 +96,8 @@ contract BlindAuction {
         require(ended == false, "auction already ended");
         ended = true;
         if (highestBidder != owner) {
-            emit AuctionEnded(highestBidder, minimumBid);
-            owner.transfer(minimumBid);
+            emit AuctionEnded(highestBidder, highestBid);
+            owner.transfer(highestBid);
         } else {
             emit AuctionEnded(owner, 0);
         }

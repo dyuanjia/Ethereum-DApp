@@ -132,12 +132,6 @@ class Main extends Component {
     this.setState({ bids });
   };
 
-  updateBid = (amt) => {
-    const { bids } = this.state;
-    bids[0].secret = amt;
-    this.setState({ bids });
-  };
-
   bid = (bidHash) => {
     this.setState({ funcLoading: true });
     this.loadAccount().then(() => {
@@ -177,17 +171,21 @@ class Main extends Component {
           .send({ from: account, value: amt })
           .on("transactionHash", (hash) => {
             this.setState({ message: "Reveal Successful", funcLoading: false });
-            this.updateBid(amt);
           })
           .on("error", (err) => {
             this.getStage().then((newStage) => {
               if (stage !== newStage) {
                 alert("Auction has moved on to a different stage");
+                this.setState({
+                  stage: newStage,
+                  funcLoading: false,
+                });
+              } else {
+                this.setState({
+                  message: "Already revealed or bid amount too low",
+                  funcLoading: false,
+                });
               }
-              this.setState({
-                stage: newStage,
-                funcLoading: false,
-              });
             });
           });
       } catch (err) {
@@ -232,6 +230,48 @@ class Main extends Component {
           this.setState({ message: "You have not bidded" });
         });
     });
+  };
+
+  endAuction = () => {
+    const { auction, account } = this.state;
+    auction.methods
+      .endAuction()
+      .send({ from: account })
+      .then(() => {
+        this.setState({ stage: 3 });
+      })
+      .catch((err) => {
+        console.log(err);
+        this.setState({ stage: 3 });
+      });
+  };
+
+  getWinner = () => {
+    const { auction, itemName, itemMinBid } = this.state;
+    const now = Date.now() / 1000;
+    auction.methods
+      .highestBid()
+      .call()
+      .then((highestBid) => {
+        if (highestBid === itemMinBid) {
+          this.setState({ bidMsg: "There is currently no highest bidder" });
+        } else {
+          auction.methods
+            .highestBidder()
+            .call()
+            .then((winner) => {
+              const bids = [
+                {
+                  date: convertTime(now),
+                  name: itemName,
+                  hash: winner,
+                  secret: highestBid,
+                },
+              ];
+              this.setState({ bids, bidMsg: "" });
+            });
+        }
+      });
   };
 
   getStage = () => {
@@ -336,6 +376,8 @@ class Main extends Component {
                       message={message}
                       stage={stage}
                       updateStage={this.updateStage}
+                      endAuction={this.endAuction}
+                      getWinner={this.getWinner}
                     />
                   )}
                 />

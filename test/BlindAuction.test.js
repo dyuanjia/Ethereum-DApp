@@ -65,6 +65,10 @@ contract(
         const _highestBidder = await blindAuction.highestBidder();
         assert.equal(_highestBidder, itemOwner);
       });
+      it("set the minimum bid as the default highest bid", async () => {
+        const _highestBid = await blindAuction.highestBid();
+        assert.equal(_highestBid, minBid);
+      });
       it("starts in bidding stage", async () => {
         const _stage = await blindAuction.getStage();
         assert.equal(_stage, 0);
@@ -221,7 +225,7 @@ contract(
         assert.equal(event._value, secret3);
         const newHighestBidder = await blindAuction.highestBidder();
         assert.equal(newHighestBidder, bidder3);
-        const newHighestBid = await blindAuction.minimumBid();
+        const newHighestBid = await blindAuction.highestBid();
         assert.equal(newHighestBid, secret3);
         const afterBalance = await web3.eth.getBalance(bidder2);
         assert.equal(afterBalance - beforeBalance, secret2);
@@ -252,7 +256,7 @@ contract(
     describe("An Auction without valid bidders", async () => {
       before(async () => {
         blindAuction = await BlindAuction.new(name, desc, itemOwner, minBid);
-        console.log("Sleeping until revealing stage...");
+        console.log("Sleeping until revealing stage ends...");
         await sleep((stageDuration + 1) * 1000 * 2);
       });
 
@@ -266,7 +270,7 @@ contract(
         assert.isTrue(ended);
         const afterBalance = await web3.eth.getBalance(itemOwner);
         assert.equal(beforeBalance, afterBalance);
-        const highestBid = await blindAuction.minimumBid();
+        const highestBid = await blindAuction.highestBid();
         assert.equal(highestBid, minBid);
       });
     });
