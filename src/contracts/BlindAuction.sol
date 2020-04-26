@@ -22,8 +22,7 @@ contract BlindAuction {
         uint secret;
     }
     mapping (address => BlindBid) bids;
-    // Allowed withdrawals of previous bids
-    mapping (address => uint) pendingReturns;
+    uint256 public highestBid;
     address payable public highestBidder;
     
     modifier onlyBefore(uint _time, address _sender) { 
@@ -51,6 +50,7 @@ contract BlindAuction {
             biddingEndTime = now + stageDuration;
             revealEndTime = biddingEndTime + stageDuration;
             highestBidder = _owner;
+            highestBid = _minimum_bid;
     }
     
     function bid(bytes32 _hash) external onlyBefore(biddingEndTime, msg.sender) {
@@ -64,6 +64,7 @@ contract BlindAuction {
     }
     
     function withdraw() external onlyBefore(biddingEndTime, msg.sender) {
+        require(bids[msg.sender].hash != 0, "you have not bidded");
         delete bids[msg.sender];
         emit Bid(msg.sender, 0);
     }
@@ -73,7 +74,7 @@ contract BlindAuction {
         onlyAfter(biddingEndTime) {
             // checks
             require(bids[msg.sender].hash != 0, "you must have bidded during the bidding stage");
-            require(msg.value > minimumBid, "your bid is not high enough");
+            require(msg.value > highestBid, "your bid is not high enough");
             require(msg.value < MAX_BID, "bid exceeds max bid amount");
             require(bids[msg.sender].secret == 0, "bid already revealed");
             bytes32 hash = calculateHash(msg.value, _nonce);
@@ -81,7 +82,7 @@ contract BlindAuction {
             // effects
             uint256 refund = bids[highestBidder].secret;
             address payable prevHighestBidder = highestBidder;
-            minimumBid = msg.value;
+            highestBid = msg.value;
             bids[msg.sender].secret = msg.value;
             highestBidder = msg.sender;
             // interactions
@@ -95,8 +96,8 @@ contract BlindAuction {
         require(ended == false, "auction already ended");
         ended = true;
         if (highestBidder != owner) {
-            emit AuctionEnded(highestBidder, minimumBid);
-            owner.transfer(minimumBid);
+            emit AuctionEnded(highestBidder, highestBid);
+            owner.transfer(highestBid);
         } else {
             emit AuctionEnded(owner, 0);
         }
@@ -106,6 +107,19 @@ contract BlindAuction {
         require(_secret < MAX_BID, "bid exceeds max bid amount");
         bytes32 concat = bytes32(_secret << 64 | uint64(_nonce));
         return sha256(abi.encodePacked(concat));
+    }
+
+    function getStage() external view returns(uint) {
+        uint _time = now;
+        if (_time < biddingEndTime) {
+            return 0;
+        } else if (_time < revealEndTime) {
+            return 1;
+        } else if (ended) {
+            return 3;
+        } else {
+            return 2;
+        }
     }
     
     event Bid(
