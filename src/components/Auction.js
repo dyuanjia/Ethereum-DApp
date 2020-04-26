@@ -2,17 +2,17 @@ import React, { useState } from "react";
 import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
-import CircularProgress from "@material-ui/core/CircularProgress";
 import Grid from "@material-ui/core/Grid";
 import Paper from "@material-ui/core/Paper";
 import Step from "@material-ui/core/Step";
 import Stepper from "@material-ui/core/Stepper";
 import StepLabel from "@material-ui/core/StepLabel";
 import Typography from "@material-ui/core/Typography";
-import Confirmation from "./Confirmation";
+import Confirmation from "./peripherals/Confirmation";
 import Bidding from "./Bidding";
-import ItemInfo from "./ItemInfo";
 import History from "./History";
+import ItemInfo from "./ItemInfo";
+import Loading from "./peripherals/Loading";
 import Revealing from "./Revealing";
 
 const useStyles = makeStyles((theme) => ({
@@ -42,12 +42,6 @@ const useStyles = makeStyles((theme) => ({
     marginTop: "5px",
     marginRight: "auto",
     justifyContent: "left",
-  },
-  center: {
-    display: "flex",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
   },
 }));
 
@@ -107,11 +101,7 @@ export default function Auction(props) {
           </Stepper>
           <React.Fragment>
             {/* Loading */}
-            {stage === -1 && (
-              <div className={classes.center}>
-                <CircularProgress color="primary" />
-              </div>
-            )}
+            {stage === -1 && <Loading />}
             {/* Bidding */}
             {stage === 0 && (
               <Bidding

@@ -2,14 +2,16 @@ import React, { Component } from "react";
 import Web3 from "web3";
 import { Switch, Route } from "react-router-dom";
 import { withStyles } from "@material-ui/core/styles";
-import CircularProgress from "@material-ui/core/CircularProgress";
 import Container from "@material-ui/core/Container";
-import Navbar from "./Navbar";
-import Sidebar from "./Sidebar";
-import Footer from "./Footer";
+import Navbar from "./peripherals/Navbar";
+import Sidebar from "./peripherals/Sidebar";
+import Footer from "./peripherals/Footer";
 import Auction from "./Auction";
+import Create from "./Create";
+import Loading from "./peripherals/Loading";
 import NotFound from "./NotFound";
 import BlindAuction from "../abis/BlindAuction.json";
+import Payment from "../abis/Payment.json";
 import { convertTime } from "../utils/index";
 
 const styles = (theme) => ({
@@ -25,11 +27,6 @@ const styles = (theme) => ({
   container: {
     paddingTop: theme.spacing(4),
     paddingBottom: theme.spacing(4),
-  },
-  center: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
 
@@ -350,9 +347,7 @@ class Main extends Component {
           <div className={classes.appBarSpacer} />
           <Container maxWidth="lg" className={classes.container}>
             {loading ? (
-              <div className={classes.center}>
-                <CircularProgress color="primary" />
-              </div>
+              <Loading />
             ) : (
               <Switch>
                 <Route
@@ -381,6 +376,7 @@ class Main extends Component {
                     />
                   )}
                 />
+                <Route path="/new" exact render={(props) => <Create />} />
                 <Route component={NotFound} />
               </Switch>
             )}

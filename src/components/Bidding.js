@@ -55,6 +55,15 @@ export default function Form(props) {
     inputBid.current.value = "";
   };
 
+  const convertValue = () => {
+    const value = parseInt(minBid);
+    if (value < 10000000000000000) {
+      return minBid + " wei";
+    } else {
+      return (value / 1000000000000000000).toString() + " ether";
+    }
+  };
+
   return (
     <React.Fragment>
       <div className={classes.row}>
@@ -73,7 +82,7 @@ export default function Form(props) {
           />
         ) : (
           <Typography variant="h6" display="inline">
-            {minBid} wei
+            {convertValue()}
           </Typography>
         )}
       </div>
