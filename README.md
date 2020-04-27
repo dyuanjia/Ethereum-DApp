@@ -2,7 +2,7 @@
 
 A DApp that can be used to host blind auctions (school project).
 
-A blind auction is a type of auction where all bidders submit sealed bids during the bidding stage, so that no bidder knows the bid of any other participant. In this case, a sealed bid will be the `sha256` hash of the actual bid value. The bidders will then reveal their bids during the reveal stage, and the highest bidder will win after this stage ends. Compared to a standard auction, a blind auction has the advantage that there is no time pressure towards the end of the bidding period.
+A blind auction is a type of auction where all bidders submit sealed bids during the bidding stage, so that no bidder knows the bid of any other participant. In this case, a sealed bid will be the `sha256` hash of the actual bid value concatenated with a 8 byte nonce. The bidders will then reveal their bids during the reveal stage, and the highest bidder will win after this stage ends. Compared to a standard auction, a blind auction has the advantage that there is no time pressure towards the end of the bidding period.
 
 ## Getting Started
 
@@ -47,8 +47,8 @@ First, make sure ganache is running on `on 127.0.0.1:8545`. Then run the tests w
 $ truffle test
 ```
 
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
 ## Features
+
+## Preview
+
+![alt text](./screenshot.png "Index Page")

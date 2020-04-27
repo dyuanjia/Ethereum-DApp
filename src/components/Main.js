@@ -9,6 +9,7 @@ import Sidebar from "./peripherals/Sidebar";
 import Footer from "./peripherals/Footer";
 import Auction from "./Auction";
 import Create from "./Create";
+import Home from "./Home";
 import Loading from "./peripherals/Loading";
 import NotFound from "./NotFound";
 import BlindAuction from "../abis/BlindAuction.json";
@@ -106,7 +107,6 @@ class Main extends Component {
               .then((response) => response.json())
               .then((data) => {
                 if (data.success) {
-                  this.loadAuctionContract(data.auctionAddress);
                   this.setState({
                     success: true,
                     funcLoading: false,
@@ -132,9 +132,9 @@ class Main extends Component {
     this.setState({ loading: true });
     const web3 = window.web3;
     const auction = new web3.eth.Contract(BlindAuction.abi, auctionAddress, {
-      gas: "1000000",
+      gas: "1500000",
     });
-    this.setState({ auction, activeAuction: true });
+    this.setState({ auction, activeAuction: true, loading: false });
 
     //load item info
     auction.methods
@@ -160,15 +160,14 @@ class Main extends Component {
       .call()
       .then((biddingEndTime) => {
         this.setState({ biddingEndTime });
+        auction.methods
+          .revealEndTime()
+          .call()
+          .then((revealEndTime) => {
+            this.setState({ revealEndTime, funcLoading: false });
+            this.updateStage();
+          });
       });
-    auction.methods
-      .revealEndTime()
-      .call()
-      .then((revealEndTime) => {
-        this.setState({ revealEndTime });
-      });
-
-    this.updateStage();
   }
 
   addBid = (bidHash) => {
@@ -233,7 +232,8 @@ class Main extends Component {
                 });
               } else {
                 this.setState({
-                  message: "Already revealed or bid amount too low",
+                  message:
+                    "You may have already revealed, have not bidded or your bid amount is too low",
                   funcLoading: false,
                 });
               }
@@ -269,7 +269,7 @@ class Main extends Component {
 
   withdraw = () => {
     this.loadAccount().then(() => {
-      const { auction, account, bids } = this.state;
+      const { auction, account, stage, bids } = this.state;
       auction.methods
         .withdraw()
         .send({ from: account })
@@ -278,7 +278,13 @@ class Main extends Component {
           this.setState({ message: "You withdrew from this auction", bids });
         })
         .catch((err) => {
-          this.setState({ message: "You have not bidded" });
+          this.getStage().then((newStage) => {
+            if (stage !== newStage) {
+              alert("Auction has moved on to a different stage");
+            } else {
+              this.setState({ message: "You have not bidded" });
+            }
+          });
         });
     });
   };
@@ -360,6 +366,7 @@ class Main extends Component {
 
   handleAlertClose = () => {
     this.setState({ alertOpen: false });
+    window.location.reload();
   };
 
   handleDrawerOpen = () => {
@@ -438,27 +445,31 @@ class Main extends Component {
                 <Route
                   path="/"
                   exact
-                  render={(props) => (
-                    <Auction
-                      name={itemName}
-                      desc={itemDesc}
-                      minBid={itemMinBid}
-                      bids={bids}
-                      bidMsg={bidMsg}
-                      funcLoading={funcLoading}
-                      biddingEndTime={biddingEndTime}
-                      revealEndTime={revealEndTime}
-                      bid={this.bid}
-                      reveal={this.reveal}
-                      getBid={this.getBid}
-                      withdraw={this.withdraw}
-                      message={message}
-                      stage={stage}
-                      updateStage={this.updateStage}
-                      endAuction={this.endAuction}
-                      getWinner={this.getWinner}
-                    />
-                  )}
+                  render={(props) =>
+                    activeAuction ? (
+                      <Auction
+                        name={itemName}
+                        desc={itemDesc}
+                        minBid={itemMinBid}
+                        bids={bids}
+                        bidMsg={bidMsg}
+                        funcLoading={funcLoading}
+                        biddingEndTime={biddingEndTime}
+                        revealEndTime={revealEndTime}
+                        bid={this.bid}
+                        reveal={this.reveal}
+                        getBid={this.getBid}
+                        withdraw={this.withdraw}
+                        message={message}
+                        stage={stage}
+                        updateStage={this.updateStage}
+                        endAuction={this.endAuction}
+                        getWinner={this.getWinner}
+                      />
+                    ) : (
+                      <Home />
+                    )
+                  }
                 />
                 <Route
                   path="/new"
