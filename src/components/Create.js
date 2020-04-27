@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
 import Grid from "@material-ui/core/Grid";
+import LinearProgress from "@material-ui/core/LinearProgress";
 import Paper from "@material-ui/core/Paper";
 import TextField from "@material-ui/core/TextField";
 import Typography from "@material-ui/core/Typography";
-import Alert from "./peripherals/Alert";
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -24,28 +24,9 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function Create() {
+export default function Create(props) {
   const classes = useStyles();
-  const [activeAuction, setActiveAuction] = useState(false);
-
-  useEffect(() => {
-    fetch("/create")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.activeAuction) {
-          console.log(data.activeAuction);
-        } else {
-          setActiveAuction(false);
-          console.log("no");
-        }
-      });
-  }, []);
-
-  const [open, setOpen] = useState(false);
-
-  const handleClose = () => {
-    setOpen(false);
-  };
+  const { sendPayment, activeAuction, stage, funcLoading } = props;
 
   const [errorName, setErrorName] = useState(false);
   const inputName = useRef("");
@@ -65,7 +46,11 @@ export default function Create() {
     } else if (inputBid.current.value === "") {
       setErrorBid(true);
     } else {
-      setOpen(true);
+      sendPayment(
+        inputName.current.value,
+        inputDesc.current.value,
+        inputBid.current.value
+      );
     }
   };
 
@@ -74,8 +59,8 @@ export default function Create() {
       <Typography variant="h5" gutterBottom>
         Launch New Auction
       </Typography>
-      <Alert open={open} handleClose={handleClose} />
-      {activeAuction ? (
+
+      {activeAuction && stage !== 3 ? (
         <Typography variant="subtitle1">
           There is an active auction going on. Come back later.
         </Typography>
@@ -113,12 +98,22 @@ export default function Create() {
               multiline
             />
           </Grid>
+          {funcLoading && (
+            <Grid item xs={12}>
+              <LinearProgress
+                variant="query"
+                color="primary"
+                className={classes.topMargin}
+              />
+            </Grid>
+          )}
           <Grid item xs={12}>
             <div className={classes.buttons}>
               <Button
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit}
+                disabled={funcLoading}
                 className={classes.button}
               >
                 Create New Auction

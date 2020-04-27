@@ -5,6 +5,11 @@ import json
 
 app = Flask(__name__)
 
+# w3.personal.unlockAccount(w3.eth.accounts[0], '') #  Not needed with Ganache
+developer = w3.eth.accounts[0]
+w3.eth.defaultAccount = developer
+# print(w3.eth.getBalance(developer))
+
 # BlindAuction
 contract_source_code = None
 contract_source_code_file = './src/contracts/BlindAuction.sol'
@@ -13,14 +18,8 @@ with open(contract_source_code_file, 'r') as file:
 
 contract_compiled = compile_source(contract_source_code)
 contract_interface = contract_compiled['<stdin>:BlindAuction']
-CoinToss = w3.eth.contract(abi=contract_interface['abi'],
-                           bytecode=contract_interface['bin'])
-developer = w3.eth.accounts[0]
-# w3.personal.unlockAccount(w3.eth.accounts[0], '') #  Not needed with Ganache
-# tx_hash = CoinToss.constructor().transact({'from': w3.eth.accounts[0]})
-# tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
-# coinToss = w3.eth.contract(
-#     address=tx_receipt.contractAddress, abi=contract_interface['abi'])
+BlindAuction = w3.eth.contract(abi=contract_interface['abi'],
+                               bytecode=contract_interface['bin'])
 
 # Payment
 contract_source_code_file = './src/contracts/Payment.sol'
@@ -30,14 +29,25 @@ payment_compiled = compile_source(contract_source_code)
 payment_interface = payment_compiled['<stdin>:Payment']
 Payment = w3.eth.contract(abi=payment_interface['abi'],
                           bytecode=payment_interface['bin'])
-# name = 'Toss Coin'
-# symbol = 'MLC'
-# supply = 1000000
-# tx_hash = Token.constructor(name, symbol, 0, supply).transact({
-#     'from': w3.eth.accounts[0]})
-# tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
-# token = w3.eth.contract(
-#     address=tx_receipt.contractAddress, abi=erc20_interface['abi'])
+tx_hash = Payment.constructor().transact({'from': developer})
+tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+payment = w3.eth.contract(
+    address=tx_receipt.contractAddress, abi=payment_interface['abi'])
+fee = payment.functions.FEE().call()
+
+
+def createAuction(name, desc, owner, amt):
+    global BlindAuction, contract_interface
+    try:
+        minBid = w3.toWei(amt, 'ether')
+        tx_hash = BlindAuction.constructor(
+            name, desc, owner, minBid).transact({'from': developer})
+        tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+        blindAuction = w3.eth.contract(
+            address=tx_receipt.contractAddress, abi=contract_interface['abi'])
+        return blindAuction
+    except:
+        return False
 
 
 # Keeping track of active auction
@@ -53,25 +63,45 @@ def limit_remote_addr():
 @app.route('/')
 @app.route('/index', methods=['GET'])
 def index():
-    return {'activeAuction': False}
-    # return render_template('template.html', contractAddress=coinToss.address.lower(), contractABI=json.dumps(contract_interface['abi']))
+    global activeAuction
+    if (activeAuction):
+        return {
+            'activeAuction': True,
+            'auctionAddress': activeAuction.address,
+            'paymentAddress': payment.address
+        }
+    else:
+        return {
+            'activeAuction': False,
+            'auctionAddress': None,
+            'paymentAddress': payment.address
+        }
 
 
 @app.route('/create', methods=['GET', 'POST'])
 def create():
+    global activeAuction, payment, fee
     if (request.method == 'POST'):
-        return {'what': True}
+        # Retrieve payment
+        tx_hash = payment.functions.withdraw().transact()
+        tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+        # Create new auction
+        itemOwner = request.json["owner"]
+        blindAuction = createAuction(
+            request.json["name"], request.json["desc"], itemOwner, request.json["minBid"])
+        if(blindAuction):
+            activeAuction = blindAuction
+            return {'success': True, 'auctionAddress': activeAuction.address}
+        else:
+            tx_hash = w3.eth.sendTransaction(
+                {'to': itemOwner, 'value': fee})
+            tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+            return {'success': False}
     else:
         if (activeAuction):
             return {'activeAuction': True}
         else:
             return {'activeAuction': False}
-
-    # return render_template('template_ico.html',
-    #                        contractAddress=token.address.lower(),
-    #                        contractABI=json.dumps(erc20_interface['abi']),
-    #                        name=name,
-    #                        symbol=symbol)
 
 
 if __name__ == '__main__':

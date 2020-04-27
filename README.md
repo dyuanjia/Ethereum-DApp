@@ -21,7 +21,6 @@ Install NodeJS modules
 
 ```console
 $ npm install
-$ npm install --save identicon.js@^2.3.3
 ```
 
 Install Solidity compiler

@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
 import Grid from "@material-ui/core/Grid";
+import Link from "@material-ui/core/Link";
 import Paper from "@material-ui/core/Paper";
 import Step from "@material-ui/core/Step";
 import Stepper from "@material-ui/core/Stepper";
@@ -14,6 +15,7 @@ import History from "./History";
 import ItemInfo from "./ItemInfo";
 import Loading from "./peripherals/Loading";
 import Revealing from "./Revealing";
+import { convertTime } from "../utils/index";
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -138,7 +140,11 @@ export default function Auction(props) {
                   Auction has Ended
                 </Typography>
                 <Typography variant="subtitle1">
-                  Thank you for your participation if you have bidded.
+                  Thank you for your participation if you have bidded. Click{" "}
+                  <Link color="inherit" href="/new">
+                    here
+                  </Link>{" "}
+                  to launch a new auction.
                 </Typography>
               </React.Fragment>
             )}
@@ -149,8 +155,10 @@ export default function Auction(props) {
                 display="inline"
                 className={classes.time}
               >
-                {stage === 0 && "Bidding End Time: " + biddingEndTime}
-                {stage === 1 && "Reveal End Time: " + revealEndTime}
+                {stage === 0 &&
+                  "Bidding End Time: " + convertTime(biddingEndTime, true)}
+                {stage === 1 &&
+                  "Reveal End Time: " + convertTime(revealEndTime, true)}
               </Typography>
               {stage === 0 && (
                 <Button

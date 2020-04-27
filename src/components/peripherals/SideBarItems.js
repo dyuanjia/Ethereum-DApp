@@ -29,7 +29,7 @@ export const mainListItems = (
     </Link>
     {/* Potential TODO */}
     <Link to="/calculator">
-      <ListItem button>
+      <ListItem button disabled>
         <ListItemIcon>
           <Dialpad />
         </ListItemIcon>
