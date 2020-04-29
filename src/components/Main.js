@@ -3,11 +3,13 @@ import Web3 from "web3";
 import { Switch, Route } from "react-router-dom";
 import { withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
+import Alert from "./peripherals/Alert";
 import Navbar from "./peripherals/Navbar";
 import Sidebar from "./peripherals/Sidebar";
 import Footer from "./peripherals/Footer";
 import Auction from "./Auction";
 import Create from "./Create";
+import Home from "./Home";
 import Loading from "./peripherals/Loading";
 import NotFound from "./NotFound";
 import BlindAuction from "../abis/BlindAuction.json";
@@ -33,8 +35,8 @@ const styles = (theme) => ({
 class Main extends Component {
   async componentDidMount() {
     await this.loadWeb3();
-    await this.loadContract();
     await this.loadAccount();
+    await this.loadPaymentContract();
   }
 
   async loadWeb3() {
@@ -50,71 +52,122 @@ class Main extends Component {
     }
   }
 
-  async loadContract() {
-    const web3 = window.web3;
-    // load contract ABI
-    let auction;
-    web3.eth.net
-      .getId()
-      .then((networkId) => {
-        const contractData = BlindAuction.networks[networkId];
-        if (contractData) {
-          auction = new web3.eth.Contract(
-            BlindAuction.abi,
-            contractData.address
-          );
-          this.setState({ auction });
-        } else {
-          window.alert(
-            "Blind Auction contract not deployed to current network."
-          );
-        }
-        this.setState({ loading: false });
-      })
-      .then(() => {
-        //load item info
-        auction.methods
-          .name()
-          .call()
-          .then((itemName) => {
-            this.setState({ itemName });
-          });
-        auction.methods
-          .description()
-          .call()
-          .then((itemDesc) => {
-            this.setState({ itemDesc });
-          });
-        auction.methods
-          .minimumBid()
-          .call()
-          .then((itemMinBid) => {
-            this.setState({ itemMinBid });
-          });
-        auction.methods
-          .biddingEndTime()
-          .call()
-          .then((time) => {
-            const biddingEndTime = convertTime(time, true);
-            this.setState({ biddingEndTime });
-          });
-        auction.methods
-          .revealEndTime()
-          .call()
-          .then((time) => {
-            const revealEndTime = convertTime(time, true);
-            this.setState({ revealEndTime });
-          });
-
-        this.updateStage();
-      });
-  }
-
   async loadAccount() {
     const web3 = window.web3;
     web3.eth.getAccounts().then((accounts) => {
       this.setState({ account: accounts[0] });
     });
+  }
+
+  async loadPaymentContract() {
+    const web3 = window.web3;
+    let payment;
+    fetch("/index")
+      .then((res) => res.json())
+      .then((data) => {
+        payment = new web3.eth.Contract(Payment.abi, data.paymentAddress);
+        payment.methods
+          .FEE()
+          .call()
+          .then((fee) => {
+            this.setState({ fee, payment, loading: false });
+          });
+        if (data.activeAuction) {
+          this.loadAuctionContract(data.auctionAddress);
+          this.setState({ activeAuction: true });
+        } else {
+          this.setState({ stage: -1 });
+        }
+      });
+  }
+
+  sendPayment = (name, desc, minBid) => {
+    const { funcLoading } = this.state;
+    if (funcLoading) {
+      alert("There is an ongoing transaction. Please try again later");
+    } else {
+      this.setState({ funcLoading: true });
+      this.loadAccount().then(() => {
+        const { payment, fee, account } = this.state;
+        payment.methods
+          .pay()
+          .send({ from: account, value: fee })
+          .on("transactionHash", (hash) => {
+            const requestOptions = {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: name,
+                desc: desc,
+                owner: account,
+                minBid: minBid,
+              }),
+            };
+            fetch("/create", requestOptions)
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.success) {
+                  this.setState({
+                    success: true,
+                    funcLoading: false,
+                    alertOpen: true,
+                  });
+                } else {
+                  this.setState({
+                    success: false,
+                    funcLoading: false,
+                    alertOpen: true,
+                  });
+                }
+              });
+          })
+          .on("error", (err) => {
+            console.log(err);
+          });
+      });
+    }
+  };
+
+  async loadAuctionContract(auctionAddress) {
+    this.setState({ loading: true });
+    const web3 = window.web3;
+    const auction = new web3.eth.Contract(BlindAuction.abi, auctionAddress, {
+      gas: "1500000",
+    });
+    this.setState({ auction, activeAuction: true, loading: false });
+
+    //load item info
+    auction.methods
+      .name()
+      .call()
+      .then((itemName) => {
+        this.setState({ itemName });
+      });
+    auction.methods
+      .description()
+      .call()
+      .then((itemDesc) => {
+        this.setState({ itemDesc });
+      });
+    auction.methods
+      .minimumBid()
+      .call()
+      .then((itemMinBid) => {
+        this.setState({ itemMinBid });
+      });
+    auction.methods
+      .biddingEndTime()
+      .call()
+      .then((biddingEndTime) => {
+        this.setState({ biddingEndTime });
+        auction.methods
+          .revealEndTime()
+          .call()
+          .then((revealEndTime) => {
+            this.setState({ revealEndTime, funcLoading: false });
+            this.updateStage();
+          });
+      });
   }
 
   addBid = (bidHash) => {
@@ -179,7 +232,8 @@ class Main extends Component {
                 });
               } else {
                 this.setState({
-                  message: "Already revealed or bid amount too low",
+                  message:
+                    "You may have already revealed, have not bidded or your bid amount is too low",
                   funcLoading: false,
                 });
               }
@@ -215,7 +269,7 @@ class Main extends Component {
 
   withdraw = () => {
     this.loadAccount().then(() => {
-      const { auction, account, bids } = this.state;
+      const { auction, account, stage, bids } = this.state;
       auction.methods
         .withdraw()
         .send({ from: account })
@@ -224,7 +278,13 @@ class Main extends Component {
           this.setState({ message: "You withdrew from this auction", bids });
         })
         .catch((err) => {
-          this.setState({ message: "You have not bidded" });
+          this.getStage().then((newStage) => {
+            if (stage !== newStage) {
+              alert("Auction has moved on to a different stage");
+            } else {
+              this.setState({ message: "You have not bidded" });
+            }
+          });
         });
     });
   };
@@ -244,14 +304,18 @@ class Main extends Component {
   };
 
   getWinner = () => {
-    const { auction, itemName, itemMinBid } = this.state;
+    const { auction, stage, itemName, itemMinBid } = this.state;
     const now = Date.now() / 1000;
     auction.methods
       .highestBid()
       .call()
       .then((highestBid) => {
         if (highestBid === itemMinBid) {
-          this.setState({ bidMsg: "There is currently no highest bidder" });
+          if (stage === 3) {
+            this.setState({ bidMsg: "There is no winner for this auction" });
+          } else {
+            this.setState({ bidMsg: "There is currently no highest bidder" });
+          }
         } else {
           auction.methods
             .highestBidder()
@@ -272,22 +336,37 @@ class Main extends Component {
   };
 
   getStage = () => {
-    const { auction } = this.state;
+    const { auction, biddingEndTime, revealEndTime } = this.state;
+    const now = Date.now() / 1000;
     return new Promise((resolve, reject) => {
       auction.methods
-        .getStage()
+        .ended()
         .call()
-        .then((stage) => {
-          resolve(parseInt(stage, 10));
+        .then((ended) => {
+          let stage;
+          if (now < biddingEndTime) {
+            stage = 0;
+          } else if (now < revealEndTime) {
+            stage = 1;
+          } else if (ended) {
+            stage = 3;
+          } else {
+            stage = 2;
+          }
+          resolve(stage);
         });
     });
   };
 
   updateStage = () => {
     this.getStage().then((stage) => {
-      console.log("Current Stage: " + stage);
-      this.setState({ stage });
+      this.setState({ stage, loading: false, funcLoading: false });
     });
+  };
+
+  handleAlertClose = () => {
+    this.setState({ alertOpen: false });
+    window.location.reload();
   };
 
   handleDrawerOpen = () => {
@@ -300,18 +379,23 @@ class Main extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      payment: {},
+      fee: -1,
+      success: false,
       loading: true,
+      funcLoading: false,
       open: false,
+      alertOpen: false,
       account: "",
-      bidMsg: "",
       auction: {},
+      activeAuction: false,
+      bidMsg: "",
       bids: [],
       itemName: "",
       itemDesc: "",
       itemMinBid: -1,
       biddingEndTime: "",
       revealEndTime: "",
-      funcLoading: false,
       message: "",
       stage: -1,
     };
@@ -319,8 +403,11 @@ class Main extends Component {
 
   render() {
     const {
+      success,
       loading,
       open,
+      alertOpen,
+      activeAuction,
       account,
       bids,
       bidMsg,
@@ -345,6 +432,11 @@ class Main extends Component {
         <Sidebar open={open} closeDrawer={this.handleDrawerClose} />
         <main className={classes.content}>
           <div className={classes.appBarSpacer} />
+          <Alert
+            open={alertOpen}
+            handleClose={this.handleAlertClose}
+            success={success}
+          />
           <Container maxWidth="lg" className={classes.container}>
             {loading ? (
               <Loading />
@@ -353,30 +445,44 @@ class Main extends Component {
                 <Route
                   path="/"
                   exact
+                  render={(props) =>
+                    activeAuction ? (
+                      <Auction
+                        name={itemName}
+                        desc={itemDesc}
+                        minBid={itemMinBid}
+                        bids={bids}
+                        bidMsg={bidMsg}
+                        funcLoading={funcLoading}
+                        biddingEndTime={biddingEndTime}
+                        revealEndTime={revealEndTime}
+                        bid={this.bid}
+                        reveal={this.reveal}
+                        getBid={this.getBid}
+                        withdraw={this.withdraw}
+                        message={message}
+                        stage={stage}
+                        updateStage={this.updateStage}
+                        endAuction={this.endAuction}
+                        getWinner={this.getWinner}
+                      />
+                    ) : (
+                      <Home />
+                    )
+                  }
+                />
+                <Route
+                  path="/new"
+                  exact
                   render={(props) => (
-                    <Auction
-                      {...props}
-                      name={itemName}
-                      desc={itemDesc}
-                      minBid={itemMinBid}
-                      bids={bids}
-                      bidMsg={bidMsg}
-                      funcLoading={funcLoading}
-                      biddingEndTime={biddingEndTime}
-                      revealEndTime={revealEndTime}
-                      bid={this.bid}
-                      reveal={this.reveal}
-                      getBid={this.getBid}
-                      withdraw={this.withdraw}
-                      message={message}
+                    <Create
+                      sendPayment={this.sendPayment}
+                      activeAuction={activeAuction}
                       stage={stage}
-                      updateStage={this.updateStage}
-                      endAuction={this.endAuction}
-                      getWinner={this.getWinner}
+                      funcLoading={funcLoading}
                     />
                   )}
                 />
-                <Route path="/new" exact render={(props) => <Create />} />
                 <Route component={NotFound} />
               </Switch>
             )}

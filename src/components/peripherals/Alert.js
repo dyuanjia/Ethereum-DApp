@@ -7,7 +7,7 @@ import DialogContentText from "@material-ui/core/DialogContentText";
 import DialogTitle from "@material-ui/core/DialogTitle";
 
 export default function Alert(props) {
-  const { open, handleClose } = props;
+  const { open, handleClose, success } = props;
 
   return (
     <Dialog
@@ -16,10 +16,12 @@ export default function Alert(props) {
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
     >
-      <DialogTitle id="alert-dialog-title">{"Success"}</DialogTitle>
+      <DialogTitle id="alert-dialog-title">
+        {success ? "Success" : "Failure"}
+      </DialogTitle>
       <DialogContent>
         <DialogContentText id="alert-dialog-description">
-          You launched an auction.
+          {success ? "You launched an auction." : "One or more invalid inputs."}
         </DialogContentText>
       </DialogContent>
       <DialogActions>
