@@ -69,10 +69,6 @@ contract(
         const _highestBid = await blindAuction.highestBid();
         assert.equal(_highestBid, minBid);
       });
-      it("starts in bidding stage", async () => {
-        const _stage = await blindAuction.getStage();
-        assert.equal(_stage, 0);
-      });
     });
 
     describe("Invalid constructor", async () => {
@@ -180,8 +176,6 @@ contract(
         assert.equal(bid, hash1);
       });
       it("allows a bidder to reveal his bid and emits a Reveal event", async () => {
-        stage = await blindAuction.getStage();
-        assert.equal(stage, 1);
         const response = await blindAuction.reveal(nonce2, {
           from: bidder2,
           value: secret2,
@@ -247,8 +241,6 @@ contract(
         assert.equal(afterBalance - beforeBalance, secret3);
       });
       it("prevents endAuction() from being called again", async () => {
-        stage = await blindAuction.getStage();
-        assert.equal(stage, 3);
         await blindAuction.endAuction().should.be.rejected;
       });
     });

@@ -13,8 +13,8 @@ contract BlindAuction {
     uint256 public minimumBid;
     uint256 public biddingEndTime;
     uint256 public revealEndTime;
-    //uint256 stageDuration = 2 hours; // for deployment
-    uint256 stageDuration = 3 minutes; // for presentation
+    uint256 stageDuration = 2 hours; // for normal use
+    //uint256 stageDuration = 3 minutes; // for presentation
     //uint256 stageDuration = 5; // for testing
     
     struct BlindBid {
@@ -107,19 +107,6 @@ contract BlindAuction {
         require(_secret < MAX_BID, "bid exceeds max bid amount");
         bytes32 concat = bytes32(_secret << 64 | uint64(_nonce));
         return sha256(abi.encodePacked(concat));
-    }
-
-    function getStage() external view returns(uint) {
-        uint _time = now;
-        if (_time < biddingEndTime) {
-            return 0;
-        } else if (_time < revealEndTime) {
-            return 1;
-        } else if (ended) {
-            return 3;
-        } else {
-            return 2;
-        }
     }
     
     event Bid(

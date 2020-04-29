@@ -6,7 +6,7 @@ A blind auction is a type of auction where all bidders submit sealed bids during
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
 ### Dependencies
 
@@ -35,19 +35,23 @@ $ python3 -m solcx.install v0.6.1
 First, make sure ganache is running on `on 127.0.0.1:8545`. Then run it with:
 
 ```console
-$ npm start
 $ python3 server.py
+$ npm start
 ```
 
 ## Running the tests
 
-First, make sure ganache is running on `on 127.0.0.1:8545`. Then run the tests with:
+First, make sure ganache is running on `on 127.0.0.1:8545`. Also, the stage during in the BlindAuction contract needs to be changed to 5 seconds for testing purposes. Deploy the contracts with:
+
+```console
+$ truffle migrate --reset
+```
+
+Then run the tests with:
 
 ```console
 $ truffle test
 ```
-
-## Features
 
 ## Preview
 
